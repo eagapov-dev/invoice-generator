@@ -1,0 +1,190 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, pdo_pgsql, bcmath, intl, gd
+
+      - name: Install Composer dependencies
+        run: composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Build assets
+        run: npm run build
+
+      - name: Create deployment artifact
+        run: |
+          tar -czf deployment.tar.gz \
+            --exclude='.git' \
+            --exclude='node_modules' \
+            --exclude='tests' \
+            --exclude='.github' \
+            --exclude='storage/app/*' \
+            --exclude='storage/logs/*' \
+            --exclude='storage/framework/cache/*' \
+            --exclude='storage/framework/sessions/*' \
+            --exclude='storage/framework/views/*' \
+            .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment
+          path: deployment.tar.gz
+          retention-days: 1
+
+  deploy-staging:
+    name: Deploy to Staging
+    needs: build
+    runs-on: ubuntu-latest
+    environment: staging
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: deployment
+
+      - name: Deploy to server
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          source: deployment.tar.gz
+          target: /tmp
+
+      - name: Execute deployment script
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          script: |
+            cd ${{ secrets.STAGING_PATH }}
+
+            # Backup current deployment
+            if [ -d "current" ]; then
+              mv current backup-$(date +%Y%m%d-%H%M%S)
+            fi
+
+            # Extract new deployment
+            mkdir -p current
+            tar -xzf /tmp/deployment.tar.gz -C current
+            rm /tmp/deployment.tar.gz
+
+            # Setup environment
+            cd current
+            cp ../.env .env
+
+            # Run deployment commands
+            php artisan migrate --force
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
+            php artisan storage:link
+
+            # Restart services
+            sudo systemctl reload php8.3-fpm
+
+            # Cleanup old backups (keep last 5)
+            cd ..
+            ls -dt backup-* 2>/dev/null | tail -n +6 | xargs rm -rf 2>/dev/null || true
+
+  deploy-production:
+    name: Deploy to Production
+    needs: [build, deploy-staging]
+    runs-on: ubuntu-latest
+    environment: production
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: deployment
+
+      - name: Deploy to server
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: ${{ secrets.PRODUCTION_USER }}
+          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          source: deployment.tar.gz
+          target: /tmp
+
+      - name: Execute deployment script
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: ${{ secrets.PRODUCTION_USER }}
+          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          script: |
+            cd ${{ secrets.PRODUCTION_PATH }}
+
+            # Put application in maintenance mode
+            cd current 2>/dev/null && php artisan down --secret="bypass-secret" || true
+            cd ..
+
+            # Backup current deployment
+            if [ -d "current" ]; then
+              mv current backup-$(date +%Y%m%d-%H%M%S)
+            fi
+
+            # Extract new deployment
+            mkdir -p current
+            tar -xzf /tmp/deployment.tar.gz -C current
+            rm /tmp/deployment.tar.gz
+
+            # Setup environment
+            cd current
+            cp ../.env .env
+
+            # Run deployment commands
+            php artisan migrate --force
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
+            php artisan storage:link
+
+            # Bring application back up
+            php artisan up
+
+            # Restart services
+            sudo systemctl reload php8.3-fpm
+
+            # Cleanup old backups (keep last 5)
+            cd ..
+            ls -dt backup-* 2>/dev/null | tail -n +6 | xargs rm -rf 2>/dev/null || true
+
+      - name: Notify deployment success
+        if: success()
+        run: echo "Deployment to production successful!"
+
+      - name: Notify deployment failure
+        if: failure()
+        run: echo "Deployment to production failed!"
