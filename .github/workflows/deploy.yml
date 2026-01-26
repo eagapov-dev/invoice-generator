@@ -1,9 +1,10 @@
 name: Deploy
 
 on:
-  push:
-    branches: [main]
-  workflow_dispatch:
+  # Disabled auto-deploy until server is configured
+  # push:
+  #   branches: [main]
+  workflow_dispatch:  # Manual trigger only
 
 jobs:
   build:
