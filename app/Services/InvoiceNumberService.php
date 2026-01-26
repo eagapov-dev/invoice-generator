@@ -21,7 +21,7 @@ class InvoiceNumberService
             $maxNumber = $user->invoices()
                 ->where('invoice_number', 'like', 'INV-%')
                 ->get()
-                ->map(fn($inv) => (int) substr($inv->invoice_number, 4))
+                ->map(fn ($inv) => (int) substr($inv->invoice_number, 4))
                 ->max();
 
             $nextNumber = $maxNumber + 1;
@@ -29,6 +29,6 @@ class InvoiceNumberService
             $nextNumber = 1;
         }
 
-        return 'INV-' . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
+        return 'INV-'.str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
     }
 }

@@ -2,8 +2,8 @@
 
 namespace Tests\Unit;
 
-use App\Models\Invoice;
 use App\Models\Client;
+use App\Models\Invoice;
 use App\Models\User;
 use App\Services\InvoiceNumberService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -14,12 +14,13 @@ class InvoiceNumberServiceTest extends TestCase
     use RefreshDatabase;
 
     private InvoiceNumberService $service;
+
     private User $user;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new InvoiceNumberService();
+        $this->service = new InvoiceNumberService;
         $this->user = User::factory()->create();
     }
 

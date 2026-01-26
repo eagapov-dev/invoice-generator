@@ -343,7 +343,7 @@ class DemoSeeder extends Seeder
             $invoice = Invoice::create([
                 'user_id' => $user->id,
                 'client_id' => $client->id,
-                'invoice_number' => 'INV-' . str_pad($invoiceNumber++, 4, '0', STR_PAD_LEFT),
+                'invoice_number' => 'INV-'.str_pad($invoiceNumber++, 4, '0', STR_PAD_LEFT),
                 'status' => $invoiceData['status'],
                 'tax_percent' => $invoiceData['tax_percent'],
                 'discount' => $invoiceData['discount'],

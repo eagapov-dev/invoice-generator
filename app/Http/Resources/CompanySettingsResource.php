@@ -13,7 +13,7 @@ class CompanySettingsResource extends JsonResource
             'id' => $this->id,
             'company_name' => $this->company_name,
             'logo' => $this->logo,
-            'logo_url' => $this->logo ? asset('storage/' . $this->logo) : null,
+            'logo_url' => $this->logo ? asset('storage/'.$this->logo) : null,
             'address' => $this->address,
             'phone' => $this->phone,
             'email' => $this->email,

@@ -27,7 +27,7 @@ Route::get('invoices/{invoice}/pdf/download', [InvoiceController::class, 'downlo
 Route::middleware('auth:sanctum')->group(function () {
     // Auth
     Route::post('auth/logout', [AuthController::class, 'logout']);
-    Route::get('user', fn(Request $request) => new UserResource($request->user()));
+    Route::get('user', fn (Request $request) => new UserResource($request->user()));
 
     // Dashboard
     Route::get('dashboard', [DashboardController::class, 'index']);

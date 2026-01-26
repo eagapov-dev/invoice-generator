@@ -10,7 +10,7 @@ enum ProductUnit: string
 
     public function label(): string
     {
-        return match($this) {
+        return match ($this) {
             self::Hour => 'Hour',
             self::Piece => 'Piece',
             self::Service => 'Service',

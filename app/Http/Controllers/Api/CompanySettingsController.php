@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CompanySettings\UpdateCompanySettingsRequest;
 use App\Http\Resources\CompanySettingsResource;
-use App\Models\CompanySettings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -16,7 +15,7 @@ class CompanySettingsController extends Controller
     {
         $settings = $request->user()->companySettings;
 
-        if (!$settings) {
+        if (! $settings) {
             $settings = $request->user()->companySettings()->create([
                 'default_currency' => 'USD',
                 'default_tax_percent' => 0,
@@ -32,7 +31,7 @@ class CompanySettingsController extends Controller
     {
         $settings = $request->user()->companySettings;
 
-        if (!$settings) {
+        if (! $settings) {
             $settings = $request->user()->companySettings()->create($request->validated());
         } else {
             $settings->update($request->validated());
@@ -51,7 +50,7 @@ class CompanySettingsController extends Controller
 
         $settings = $request->user()->companySettings;
 
-        if (!$settings) {
+        if (! $settings) {
             $settings = $request->user()->companySettings()->create([
                 'default_currency' => 'USD',
                 'default_tax_percent' => 0,

@@ -17,7 +17,7 @@ class InvoiceFactory extends Factory
         return [
             'user_id' => User::factory(),
             'client_id' => Client::factory(),
-            'invoice_number' => 'INV-' . str_pad(fake()->unique()->numberBetween(1, 9999), 4, '0', STR_PAD_LEFT),
+            'invoice_number' => 'INV-'.str_pad(fake()->unique()->numberBetween(1, 9999), 4, '0', STR_PAD_LEFT),
             'subtotal' => fake()->randomFloat(2, 100, 10000),
             'tax_percent' => fake()->randomElement([0, 5, 10, 20]),
             'discount' => fake()->randomFloat(2, 0, 100),

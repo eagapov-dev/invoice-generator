@@ -104,7 +104,7 @@ class CompanySettingsTest extends TestCase
                 'message',
             ]);
 
-        Storage::disk('public')->assertExists('logos/' . $file->hashName());
+        Storage::disk('public')->assertExists('logos/'.$file->hashName());
     }
 
     public function test_logo_must_be_an_image(): void

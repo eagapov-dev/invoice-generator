@@ -32,12 +32,12 @@ class InvoiceController extends Controller
         $invoices = $request->user()
             ->invoices()
             ->with(['client'])
-            ->when($request->status, fn($q, $status) => $q->where('status', $status))
-            ->when($request->client_id, fn($q, $clientId) => $q->where('client_id', $clientId))
+            ->when($request->status, fn ($q, $status) => $q->where('status', $status))
+            ->when($request->client_id, fn ($q, $clientId) => $q->where('client_id', $clientId))
             ->when($request->search, function ($query, $search) {
                 $query->where(function ($q) use ($search) {
                     $q->where('invoice_number', 'ilike', "%{$search}%")
-                      ->orWhereHas('client', fn($q) => $q->where('name', 'ilike', "%{$search}%"));
+                        ->orWhereHas('client', fn ($q) => $q->where('name', 'ilike', "%{$search}%"));
                 });
             })
             ->latest()
@@ -169,7 +169,7 @@ class InvoiceController extends Controller
     {
         $this->authorize('update', $invoice);
 
-        if (!$invoice->client->email) {
+        if (! $invoice->client->email) {
             return response()->json([
                 'message' => 'Client does not have an email address.',
             ], 422);

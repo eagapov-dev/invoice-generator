@@ -2,11 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Enums\InvoiceStatus;
 use App\Models\Client;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
-use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -16,6 +14,7 @@ class InvoiceTest extends TestCase
     use RefreshDatabase;
 
     private User $user;
+
     private Client $client;
 
     protected function setUp(): void
