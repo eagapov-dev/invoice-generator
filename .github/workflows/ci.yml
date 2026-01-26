@@ -70,7 +70,7 @@ jobs:
           DB_DATABASE: testing
           DB_USERNAME: postgres
           DB_PASSWORD: postgres
-        run: php artisan test --parallel --coverage-text
+        run: php artisan test --coverage-text
 
   frontend:
     name: Frontend Build & Lint
