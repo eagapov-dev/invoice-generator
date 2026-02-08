@@ -194,7 +194,7 @@ class InvoiceTest extends TestCase
             ->deleteJson("/api/invoices/{$invoice->id}");
 
         $response->assertStatus(204);
-        $this->assertDatabaseMissing('invoices', ['id' => $invoice->id]);
+        $this->assertSoftDeleted('invoices', ['id' => $invoice->id]);
     }
 
     public function test_user_can_filter_invoices_by_status(): void

@@ -9,6 +9,10 @@ export const invoicesApi = {
     updateStatus: (id, status) => api.patch(`/invoices/${id}/status`, { status }),
     send: (id) => api.post(`/invoices/${id}/send`),
     getPdfUrl: (id) => api.get(`/invoices/${id}/pdf-url`),
+    toggleShare: (id) => api.patch(`/invoices/${id}/share`),
+    getPublic: (token) => api.get(`/p/${token}`),
+    exportCsv: (params = {}) => api.get('/export/invoices/csv', { params, responseType: 'blob' }),
+    exportExcel: (params = {}) => api.get('/export/invoices/excel', { params, responseType: 'blob' }),
 };
 
 export default invoicesApi;

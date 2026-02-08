@@ -4,8 +4,9 @@ import productsApi from '../../api/products';
 import Button from '../../components/common/Button';
 import Card from '../../components/common/Card';
 import Input from '../../components/common/Input';
-import Modal from '../../components/common/Modal';
 import Badge from '../../components/common/Badge';
+import Alert from '../../components/common/Alert';
+import DeleteConfirmModal from '../../components/common/DeleteConfirmModal';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { PRODUCT_UNITS } from '../../utils/constants';
 
@@ -15,6 +16,7 @@ export default function ProductList() {
     const [search, setSearch] = useState('');
     const [deleteModal, setDeleteModal] = useState({ open: false, product: null });
     const [deleting, setDeleting] = useState(false);
+    const [error, setError] = useState(null);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -25,8 +27,9 @@ export default function ProductList() {
         try {
             const response = await productsApi.getAll({ search });
             setProducts(response.data.data);
-        } catch (error) {
-            console.error('Failed to load products:', error);
+        } catch (err) {
+            console.error('Failed to load products:', err);
+            setError('Failed to load products. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -39,8 +42,9 @@ export default function ProductList() {
             await productsApi.delete(deleteModal.product.id);
             setProducts(products.filter(p => p.id !== deleteModal.product.id));
             setDeleteModal({ open: false, product: null });
-        } catch (error) {
-            console.error('Failed to delete product:', error);
+        } catch (err) {
+            console.error('Failed to delete product:', err);
+            setError('Failed to delete product. Please try again.');
         } finally {
             setDeleting(false);
         }
@@ -57,6 +61,12 @@ export default function ProductList() {
                     Add Product
                 </Button>
             </div>
+
+            {error && (
+                <Alert variant="error" onClose={() => setError(null)}>
+                    {error}
+                </Alert>
+            )}
 
             <Card>
                 <div className="mb-4">
@@ -128,23 +138,15 @@ export default function ProductList() {
                 )}
             </Card>
 
-            <Modal
+            <DeleteConfirmModal
                 isOpen={deleteModal.open}
                 onClose={() => setDeleteModal({ open: false, product: null })}
+                onConfirm={handleDelete}
+                loading={deleting}
                 title="Delete Product"
             >
-                <p className="text-gray-600 mb-4">
-                    Are you sure you want to delete <strong>{deleteModal.product?.name}</strong>? This action cannot be undone.
-                </p>
-                <div className="flex justify-end gap-3">
-                    <Button variant="secondary" onClick={() => setDeleteModal({ open: false, product: null })}>
-                        Cancel
-                    </Button>
-                    <Button variant="danger" onClick={handleDelete} loading={deleting}>
-                        Delete
-                    </Button>
-                </div>
-            </Modal>
+                <p>Are you sure you want to delete <strong>{deleteModal.product?.name}</strong>? This action cannot be undone.</p>
+            </DeleteConfirmModal>
         </div>
     );
 }

@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import invoicesApi from '../../api/invoices';
+import plansApi from '../../api/plans';
 import Button from '../../components/common/Button';
 import Card from '../../components/common/Card';
 import Input from '../../components/common/Input';
 import Select from '../../components/common/Select';
 import Badge from '../../components/common/Badge';
-import Modal from '../../components/common/Modal';
+import Alert from '../../components/common/Alert';
+import DeleteConfirmModal from '../../components/common/DeleteConfirmModal';
 import { formatCurrency, formatDate } from '../../utils/formatCurrency';
 import { INVOICE_STATUSES } from '../../utils/constants';
 
@@ -17,18 +19,28 @@ export default function InvoiceList() {
     const [status, setStatus] = useState('');
     const [deleteModal, setDeleteModal] = useState({ open: false, invoice: null });
     const [deleting, setDeleting] = useState(false);
+    const [exporting, setExporting] = useState(null);
+    const [canExport, setCanExport] = useState(false);
+    const [message, setMessage] = useState(null);
     const navigate = useNavigate();
 
     useEffect(() => {
         loadInvoices();
     }, [search, status]);
 
+    useEffect(() => {
+        plansApi.getUserLimits().then(res => {
+            setCanExport(res.data.data.features?.export_csv || false);
+        }).catch(() => {});
+    }, []);
+
     const loadInvoices = async () => {
         try {
             const response = await invoicesApi.getAll({ search, status: status || undefined });
             setInvoices(response.data.data);
-        } catch (error) {
-            console.error('Failed to load invoices:', error);
+        } catch (err) {
+            console.error('Failed to load invoices:', err);
+            setMessage({ type: 'error', text: 'Failed to load invoices. Please try again.' });
         } finally {
             setLoading(false);
         }
@@ -41,10 +53,39 @@ export default function InvoiceList() {
             await invoicesApi.delete(deleteModal.invoice.id);
             setInvoices(invoices.filter(i => i.id !== deleteModal.invoice.id));
             setDeleteModal({ open: false, invoice: null });
-        } catch (error) {
-            console.error('Failed to delete invoice:', error);
+        } catch (err) {
+            console.error('Failed to delete invoice:', err);
+            setMessage({ type: 'error', text: 'Failed to delete invoice. Please try again.' });
         } finally {
             setDeleting(false);
+        }
+    };
+
+    const handleExport = async (format) => {
+        setExporting(format);
+        try {
+            const params = { search: search || undefined, status: status || undefined };
+            const response = format === 'csv'
+                ? await invoicesApi.exportCsv(params)
+                : await invoicesApi.exportExcel(params);
+
+            const ext = format === 'csv' ? 'csv' : 'xlsx';
+            const blob = new Blob([response.data]);
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `invoices-${new Date().toISOString().slice(0, 10)}.${ext}`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (error) {
+            const msg = error.response?.status === 403
+                ? 'Export is available on Pro and Business plans. Please upgrade.'
+                : 'Failed to export invoices.';
+            setMessage({ type: 'error', text: msg });
+        } finally {
+            setExporting(null);
         }
     };
 
@@ -60,10 +101,38 @@ export default function InvoiceList() {
                     <h1 className="text-2xl font-bold text-gray-900">Invoices</h1>
                     <p className="text-gray-600">Manage your invoices</p>
                 </div>
-                <Button onClick={() => navigate('/invoices/create')}>
-                    Create Invoice
-                </Button>
+                <div className="flex gap-2">
+                    {canExport && (
+                        <>
+                            <Button
+                                variant="secondary"
+                                onClick={() => handleExport('csv')}
+                                loading={exporting === 'csv'}
+                                disabled={!!exporting}
+                            >
+                                Export CSV
+                            </Button>
+                            <Button
+                                variant="secondary"
+                                onClick={() => handleExport('excel')}
+                                loading={exporting === 'excel'}
+                                disabled={!!exporting}
+                            >
+                                Export Excel
+                            </Button>
+                        </>
+                    )}
+                    <Button onClick={() => navigate('/invoices/create')}>
+                        Create Invoice
+                    </Button>
+                </div>
             </div>
+
+            {message && (
+                <Alert variant={message.type} onClose={() => setMessage(null)}>
+                    {message.text}
+                </Alert>
+            )}
 
             <Card>
                 <div className="flex flex-wrap gap-4 mb-4">
@@ -154,23 +223,15 @@ export default function InvoiceList() {
                 )}
             </Card>
 
-            <Modal
+            <DeleteConfirmModal
                 isOpen={deleteModal.open}
                 onClose={() => setDeleteModal({ open: false, invoice: null })}
+                onConfirm={handleDelete}
+                loading={deleting}
                 title="Delete Invoice"
             >
-                <p className="text-gray-600 mb-4">
-                    Are you sure you want to delete invoice <strong>{deleteModal.invoice?.invoice_number}</strong>? This action cannot be undone.
-                </p>
-                <div className="flex justify-end gap-3">
-                    <Button variant="secondary" onClick={() => setDeleteModal({ open: false, invoice: null })}>
-                        Cancel
-                    </Button>
-                    <Button variant="danger" onClick={handleDelete} loading={deleting}>
-                        Delete
-                    </Button>
-                </div>
-            </Modal>
+                <p>Are you sure you want to delete invoice <strong>{deleteModal.invoice?.invoice_number}</strong>? This action cannot be undone.</p>
+            </DeleteConfirmModal>
         </div>
     );
 }

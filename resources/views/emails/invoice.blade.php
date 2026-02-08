@@ -94,6 +94,10 @@
         </table>
     </div>
 
+    @if($invoice->public_token)
+    <a href="{{ url('/p/' . $invoice->public_token) }}" class="cta-button" style="color: white;">View Invoice Online</a>
+    @endif
+
     @if($company && $company->bank_details)
     <p><strong>Payment Details:</strong></p>
     <p>{!! nl2br(e($company->bank_details)) !!}</p>

@@ -95,7 +95,7 @@ class ClientTest extends TestCase
             ->deleteJson("/api/clients/{$client->id}");
 
         $response->assertStatus(204);
-        $this->assertDatabaseMissing('clients', ['id' => $client->id]);
+        $this->assertSoftDeleted('clients', ['id' => $client->id]);
     }
 
     public function test_user_can_search_clients(): void

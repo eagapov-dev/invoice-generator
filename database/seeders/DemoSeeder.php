@@ -9,6 +9,7 @@ use App\Models\CompanySettings;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Product;
+use App\Models\Plan;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -18,11 +19,14 @@ class DemoSeeder extends Seeder
     public function run(): void
     {
         // Create demo user
+        $freePlan = Plan::where('slug', 'free')->first();
+
         $user = User::create([
             'name' => 'Demo User',
             'email' => 'demo@example.com',
             'password' => Hash::make('password'),
             'email_verified_at' => now(),
+            'plan_id' => $freePlan?->id,
         ]);
 
         // Create company settings

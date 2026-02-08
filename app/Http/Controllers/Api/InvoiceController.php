@@ -12,6 +12,7 @@ use App\Mail\InvoiceMail;
 use App\Models\Invoice;
 use App\Services\InvoiceNumberService;
 use App\Services\InvoicePdfService;
+use App\Services\PlanLimitService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -19,12 +20,14 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Str;
 
 class InvoiceController extends Controller
 {
     public function __construct(
         private InvoiceNumberService $invoiceNumberService,
-        private InvoicePdfService $pdfService
+        private InvoicePdfService $pdfService,
+        private PlanLimitService $planLimitService
     ) {}
 
     public function index(Request $request): AnonymousResourceCollection
@@ -41,7 +44,7 @@ class InvoiceController extends Controller
                 });
             })
             ->latest()
-            ->paginate($request->per_page ?? 15);
+            ->paginate($this->perPage($request));
 
         return InvoiceResource::collection($invoices);
     }
@@ -49,6 +52,15 @@ class InvoiceController extends Controller
     public function store(StoreInvoiceRequest $request): InvoiceResource
     {
         $invoice = DB::transaction(function () use ($request) {
+            $currency = $request->currency
+                ?? $request->user()->companySettings?->default_currency
+                ?? 'USD';
+
+            $template = $request->pdf_template ?? 'classic';
+            if (! $this->planLimitService->canUseTemplate($request->user(), $template)) {
+                $template = 'classic';
+            }
+
             $invoice = $request->user()->invoices()->create([
                 'invoice_number' => $this->invoiceNumberService->generate($request->user()),
                 'client_id' => $request->client_id,
@@ -57,6 +69,8 @@ class InvoiceController extends Controller
                 'due_date' => $request->due_date,
                 'notes' => $request->notes,
                 'status' => $request->status ?? InvoiceStatus::Draft,
+                'currency' => $currency,
+                'pdf_template' => $template,
             ]);
 
             foreach ($request->items as $item) {
@@ -73,6 +87,8 @@ class InvoiceController extends Controller
 
             return $invoice;
         });
+
+        $request->user()->increment('monthly_invoice_count');
 
         return new InvoiceResource($invoice->load(['client', 'items']));
     }
@@ -163,6 +179,27 @@ class InvoiceController extends Controller
     {
         // No authorization needed - signature validates the request
         return $this->pdfService->download($invoice);
+    }
+
+    public function toggleShare(Request $request, Invoice $invoice): JsonResponse
+    {
+        $this->authorize('update', $invoice);
+
+        if ($invoice->public_token) {
+            $invoice->update(['public_token' => null]);
+
+            return response()->json([
+                'shared' => false,
+                'public_url' => null,
+            ]);
+        }
+
+        $invoice->update(['public_token' => Str::random(32)]);
+
+        return response()->json([
+            'shared' => true,
+            'public_url' => url("/p/{$invoice->public_token}"),
+        ]);
     }
 
     public function send(Request $request, Invoice $invoice): JsonResponse

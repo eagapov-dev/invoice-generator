@@ -8,27 +8,23 @@ class InvoiceNumberService
 {
     public function generate(User $user): string
     {
-        $lastInvoice = $user->invoices()
-            ->where('invoice_number', 'like', 'INV-%')
-            ->orderBy('id', 'desc')
-            ->first();
+        $query = $user->invoices()
+            ->withTrashed()
+            ->where('invoice_number', 'like', 'INV-%');
 
-        if ($lastInvoice) {
-            // Extract the number part after "INV-"
-            $lastNumber = (int) substr($lastInvoice->invoice_number, 4);
+        $driver = $query->getQuery()->getConnection()->getDriverName();
 
-            // Find the highest number by checking all invoices
-            $maxNumber = $user->invoices()
-                ->where('invoice_number', 'like', 'INV-%')
-                ->get()
-                ->map(fn ($inv) => (int) substr($inv->invoice_number, 4))
-                ->max();
-
-            $nextNumber = $maxNumber + 1;
+        if ($driver === 'sqlite') {
+            $maxNumber = (int) $query
+                ->selectRaw("MAX(CAST(SUBSTR(invoice_number, 5) AS INTEGER)) as max_num")
+                ->value('max_num');
         } else {
-            $nextNumber = 1;
+            $maxNumber = (int) $query
+                ->lockForUpdate()
+                ->selectRaw("MAX(CAST(SUBSTRING(invoice_number FROM 5) AS INTEGER)) as max_num")
+                ->value('max_num');
         }
 
-        return 'INV-'.str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
+        return 'INV-'.str_pad($maxNumber + 1, 4, '0', STR_PAD_LEFT);
     }
 }

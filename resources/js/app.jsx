@@ -1,9 +1,10 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/layout/ProtectedRoute';
 import Layout from './components/layout/Layout';
+import ErrorBoundary from './components/common/ErrorBoundary';
 
 // Auth pages
 import Login from './pages/auth/Login';
@@ -23,44 +24,66 @@ import InvoiceCreate from './pages/invoices/InvoiceCreate';
 import InvoiceEdit from './pages/invoices/InvoiceEdit';
 import InvoiceView from './pages/invoices/InvoiceView';
 import Settings from './pages/Settings';
+import Billing from './pages/Billing';
+import Pricing from './pages/Pricing';
+import Landing from './pages/Landing';
+import NotFound from './pages/NotFound';
+import RecurringInvoiceList from './pages/recurring/RecurringInvoiceList';
+import RecurringInvoiceCreate from './pages/recurring/RecurringInvoiceCreate';
+import RecurringInvoiceEdit from './pages/recurring/RecurringInvoiceEdit';
+import PublicInvoicePage from './pages/invoices/PublicInvoicePage';
 
 import '../css/app.css';
 
 function App() {
     return (
-        <AuthProvider>
-            <BrowserRouter>
-                <Routes>
-                    {/* Public routes */}
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/register" element={<Register />} />
-                    <Route path="/forgot-password" element={<ForgotPassword />} />
+        <ErrorBoundary>
+            <AuthProvider>
+                <BrowserRouter>
+                    <Routes>
+                        {/* Public routes */}
+                        <Route path="/login" element={<Login />} />
+                        <Route path="/register" element={<Register />} />
+                        <Route path="/forgot-password" element={<ForgotPassword />} />
 
-                    {/* Protected routes */}
-                    <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-                        <Route path="/dashboard" element={<Dashboard />} />
+                        {/* Public routes */}
+                        <Route path="/pricing" element={<Pricing />} />
+                        <Route path="/p/:token" element={<PublicInvoicePage />} />
 
-                        <Route path="/clients" element={<ClientList />} />
-                        <Route path="/clients/create" element={<ClientCreate />} />
-                        <Route path="/clients/:id/edit" element={<ClientEdit />} />
+                        {/* Protected routes */}
+                        <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+                            <Route path="/dashboard" element={<Dashboard />} />
 
-                        <Route path="/products" element={<ProductList />} />
-                        <Route path="/products/create" element={<ProductCreate />} />
-                        <Route path="/products/:id/edit" element={<ProductEdit />} />
+                            <Route path="/clients" element={<ClientList />} />
+                            <Route path="/clients/create" element={<ClientCreate />} />
+                            <Route path="/clients/:id/edit" element={<ClientEdit />} />
 
-                        <Route path="/invoices" element={<InvoiceList />} />
-                        <Route path="/invoices/create" element={<InvoiceCreate />} />
-                        <Route path="/invoices/:id" element={<InvoiceView />} />
-                        <Route path="/invoices/:id/edit" element={<InvoiceEdit />} />
+                            <Route path="/products" element={<ProductList />} />
+                            <Route path="/products/create" element={<ProductCreate />} />
+                            <Route path="/products/:id/edit" element={<ProductEdit />} />
 
-                        <Route path="/settings" element={<Settings />} />
-                    </Route>
+                            <Route path="/invoices" element={<InvoiceList />} />
+                            <Route path="/invoices/create" element={<InvoiceCreate />} />
+                            <Route path="/invoices/:id" element={<InvoiceView />} />
+                            <Route path="/invoices/:id/edit" element={<InvoiceEdit />} />
 
-                    {/* Redirect root to dashboard */}
-                    <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                </Routes>
-            </BrowserRouter>
-        </AuthProvider>
+                            <Route path="/recurring" element={<RecurringInvoiceList />} />
+                            <Route path="/recurring/create" element={<RecurringInvoiceCreate />} />
+                            <Route path="/recurring/:id/edit" element={<RecurringInvoiceEdit />} />
+
+                            <Route path="/settings" element={<Settings />} />
+                            <Route path="/billing" element={<Billing />} />
+                        </Route>
+
+                        {/* Landing page */}
+                        <Route path="/" element={<Landing />} />
+
+                        {/* 404 */}
+                        <Route path="*" element={<NotFound />} />
+                    </Routes>
+                </BrowserRouter>
+            </AuthProvider>
+        </ErrorBoundary>
     );
 }
 

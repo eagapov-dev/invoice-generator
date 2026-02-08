@@ -1,12 +1,15 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 
 const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
     { name: 'Invoices', href: '/invoices', icon: DocumentIcon },
+    { name: 'Recurring', href: '/recurring', icon: ArrowPathIcon },
     { name: 'Clients', href: '/clients', icon: UsersIcon },
     { name: 'Products', href: '/products', icon: CubeIcon },
     { name: 'Settings', href: '/settings', icon: CogIcon },
+    { name: 'Billing', href: '/billing', icon: CreditCardIcon },
 ];
 
 function HomeIcon(props) {
@@ -41,6 +44,22 @@ function CubeIcon(props) {
     );
 }
 
+function ArrowPathIcon(props) {
+    return (
+        <svg {...props} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182" />
+        </svg>
+    );
+}
+
+function CreditCardIcon(props) {
+    return (
+        <svg {...props} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Z" />
+        </svg>
+    );
+}
+
 function CogIcon(props) {
     return (
         <svg {...props} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -51,6 +70,15 @@ function CogIcon(props) {
 }
 
 export default function Sidebar() {
+    const { user } = useAuth();
+    const planName = user?.plan?.name || 'Free';
+
+    const planColors = {
+        Free: 'bg-gray-600 text-gray-200',
+        Pro: 'bg-blue-600 text-white',
+        Business: 'bg-purple-600 text-white',
+    };
+
     return (
         <div className="flex h-full w-64 flex-col bg-gray-900">
             <div className="flex h-16 shrink-0 items-center px-6">
@@ -76,6 +104,11 @@ export default function Sidebar() {
                         </li>
                     ))}
                 </ul>
+                <div className="border-t border-gray-700 pt-4 pb-2 px-3">
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${planColors[planName] || planColors.Free}`}>
+                        {planName} Plan
+                    </span>
+                </div>
             </nav>
         </div>
     );

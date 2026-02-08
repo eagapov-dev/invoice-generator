@@ -6,7 +6,7 @@ import Card from '../../components/common/Card';
 import Badge from '../../components/common/Badge';
 import Alert from '../../components/common/Alert';
 import { formatCurrency, formatDate } from '../../utils/formatCurrency';
-import { INVOICE_STATUSES } from '../../utils/constants';
+import { INVOICE_STATUSES, PDF_TEMPLATES } from '../../utils/constants';
 
 export default function InvoiceView() {
     const { id } = useParams();
@@ -15,6 +15,7 @@ export default function InvoiceView() {
     const [loading, setLoading] = useState(true);
     const [sending, setSending] = useState(false);
     const [message, setMessage] = useState(null);
+    const [copied, setCopied] = useState(false);
 
     useEffect(() => {
         loadInvoice();
@@ -24,9 +25,13 @@ export default function InvoiceView() {
         try {
             const response = await invoicesApi.get(id);
             setInvoice(response.data.data);
-        } catch (error) {
-            console.error('Failed to load invoice:', error);
-            navigate('/invoices');
+        } catch (err) {
+            console.error('Failed to load invoice:', err);
+            if (err.response?.status === 404) {
+                navigate('/invoices');
+            } else {
+                setMessage({ type: 'error', text: 'Failed to load invoice. Please try again.' });
+            }
         } finally {
             setLoading(false);
         }
@@ -52,6 +57,31 @@ export default function InvoiceView() {
             setMessage({ type: 'error', text: error.response?.data?.message || 'Failed to send invoice.' });
         } finally {
             setSending(false);
+        }
+    };
+
+    const handleToggleShare = async () => {
+        try {
+            const response = await invoicesApi.toggleShare(id);
+            setInvoice(prev => ({
+                ...prev,
+                public_token: response.data.shared ? response.data.public_url.split('/p/')[1] : null,
+                public_url: response.data.public_url,
+            }));
+            setMessage({
+                type: 'success',
+                text: response.data.shared ? 'Public link enabled.' : 'Public link disabled.',
+            });
+        } catch (error) {
+            setMessage({ type: 'error', text: 'Failed to update sharing settings.' });
+        }
+    };
+
+    const handleCopyLink = () => {
+        if (invoice.public_url) {
+            navigator.clipboard.writeText(invoice.public_url);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
         }
     };
 
@@ -138,8 +168,8 @@ export default function InvoiceView() {
                                         <tr key={index}>
                                             <td className="px-4 py-3 text-gray-900">{item.description}</td>
                                             <td className="px-4 py-3 text-right text-gray-600">{item.quantity}</td>
-                                            <td className="px-4 py-3 text-right text-gray-600">{formatCurrency(item.price)}</td>
-                                            <td className="px-4 py-3 text-right text-gray-900 font-medium">{formatCurrency(item.total)}</td>
+                                            <td className="px-4 py-3 text-right text-gray-600">{formatCurrency(item.price, invoice.currency)}</td>
+                                            <td className="px-4 py-3 text-right text-gray-900 font-medium">{formatCurrency(item.total, invoice.currency)}</td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -150,23 +180,23 @@ export default function InvoiceView() {
                                 <div className="w-64 space-y-2">
                                     <div className="flex justify-between">
                                         <span className="text-gray-600">Subtotal:</span>
-                                        <span className="font-medium">{formatCurrency(invoice.subtotal)}</span>
+                                        <span className="font-medium">{formatCurrency(invoice.subtotal, invoice.currency)}</span>
                                     </div>
                                     {invoice.tax_percent > 0 && (
                                         <div className="flex justify-between">
                                             <span className="text-gray-600">Tax ({invoice.tax_percent}%):</span>
-                                            <span className="font-medium">{formatCurrency(invoice.subtotal * invoice.tax_percent / 100)}</span>
+                                            <span className="font-medium">{formatCurrency(invoice.subtotal * invoice.tax_percent / 100, invoice.currency)}</span>
                                         </div>
                                     )}
                                     {invoice.discount > 0 && (
                                         <div className="flex justify-between">
                                             <span className="text-gray-600">Discount:</span>
-                                            <span className="font-medium text-red-600">-{formatCurrency(invoice.discount)}</span>
+                                            <span className="font-medium text-red-600">-{formatCurrency(invoice.discount, invoice.currency)}</span>
                                         </div>
                                     )}
                                     <div className="flex justify-between border-t pt-2 text-lg font-bold">
                                         <span>Total:</span>
-                                        <span>{formatCurrency(invoice.total)}</span>
+                                        <span>{formatCurrency(invoice.total, invoice.currency)}</span>
                                     </div>
                                 </div>
                             </div>
@@ -224,6 +254,53 @@ export default function InvoiceView() {
                                 <div className="flex justify-between">
                                     <span className="text-gray-600">Due Date:</span>
                                     <span className="font-medium">{formatDate(invoice.due_date)}</span>
+                                </div>
+                            )}
+                            <div className="flex justify-between">
+                                <span className="text-gray-600">Template:</span>
+                                <span className="font-medium">
+                                    {PDF_TEMPLATES.find(t => t.value === invoice.pdf_template)?.label || 'Classic'}
+                                </span>
+                            </div>
+                        </div>
+                    </Card>
+
+                    <Card title="Share">
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm text-gray-600">Public Link</span>
+                                <button
+                                    onClick={handleToggleShare}
+                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                                        invoice.public_token ? 'bg-blue-600' : 'bg-gray-200'
+                                    }`}
+                                >
+                                    <span
+                                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                            invoice.public_token ? 'translate-x-6' : 'translate-x-1'
+                                        }`}
+                                    />
+                                </button>
+                            </div>
+                            {invoice.public_token && invoice.public_url && (
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="text"
+                                            readOnly
+                                            value={invoice.public_url}
+                                            className="flex-1 text-xs bg-gray-50 border border-gray-200 rounded px-2 py-1.5 text-gray-600"
+                                        />
+                                        <button
+                                            onClick={handleCopyLink}
+                                            className="px-3 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors whitespace-nowrap"
+                                        >
+                                            {copied ? 'Copied!' : 'Copy'}
+                                        </button>
+                                    </div>
+                                    <p className="text-xs text-gray-500 mt-1.5">
+                                        Anyone with this link can view and download the invoice.
+                                    </p>
                                 </div>
                             )}
                         </div>

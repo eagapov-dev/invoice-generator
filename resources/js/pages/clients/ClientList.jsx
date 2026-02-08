@@ -4,7 +4,8 @@ import clientsApi from '../../api/clients';
 import Button from '../../components/common/Button';
 import Card from '../../components/common/Card';
 import Input from '../../components/common/Input';
-import Modal from '../../components/common/Modal';
+import DeleteConfirmModal from '../../components/common/DeleteConfirmModal';
+import Alert from '../../components/common/Alert';
 
 export default function ClientList() {
     const [clients, setClients] = useState([]);
@@ -12,6 +13,7 @@ export default function ClientList() {
     const [search, setSearch] = useState('');
     const [deleteModal, setDeleteModal] = useState({ open: false, client: null });
     const [deleting, setDeleting] = useState(false);
+    const [error, setError] = useState(null);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -22,8 +24,9 @@ export default function ClientList() {
         try {
             const response = await clientsApi.getAll({ search });
             setClients(response.data.data);
-        } catch (error) {
-            console.error('Failed to load clients:', error);
+        } catch (err) {
+            console.error('Failed to load clients:', err);
+            setError('Failed to load clients. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -36,8 +39,9 @@ export default function ClientList() {
             await clientsApi.delete(deleteModal.client.id);
             setClients(clients.filter(c => c.id !== deleteModal.client.id));
             setDeleteModal({ open: false, client: null });
-        } catch (error) {
-            console.error('Failed to delete client:', error);
+        } catch (err) {
+            console.error('Failed to delete client:', err);
+            setError('Failed to delete client. Please try again.');
         } finally {
             setDeleting(false);
         }
@@ -54,6 +58,12 @@ export default function ClientList() {
                     Add Client
                 </Button>
             </div>
+
+            {error && (
+                <Alert variant="error" onClose={() => setError(null)}>
+                    {error}
+                </Alert>
+            )}
 
             <Card>
                 <div className="mb-4">
@@ -123,23 +133,15 @@ export default function ClientList() {
                 )}
             </Card>
 
-            <Modal
+            <DeleteConfirmModal
                 isOpen={deleteModal.open}
                 onClose={() => setDeleteModal({ open: false, client: null })}
+                onConfirm={handleDelete}
+                loading={deleting}
                 title="Delete Client"
             >
-                <p className="text-gray-600 mb-4">
-                    Are you sure you want to delete <strong>{deleteModal.client?.name}</strong>? This action cannot be undone.
-                </p>
-                <div className="flex justify-end gap-3">
-                    <Button variant="secondary" onClick={() => setDeleteModal({ open: false, client: null })}>
-                        Cancel
-                    </Button>
-                    <Button variant="danger" onClick={handleDelete} loading={deleting}>
-                        Delete
-                    </Button>
-                </div>
-            </Modal>
+                <p>Are you sure you want to delete <strong>{deleteModal.client?.name}</strong>? This action cannot be undone.</p>
+            </DeleteConfirmModal>
         </div>
     );
 }

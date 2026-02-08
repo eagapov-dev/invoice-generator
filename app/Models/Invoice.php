@@ -7,10 +7,21 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 class Invoice extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
+
+    protected static function booted(): void
+    {
+        static::creating(function (Invoice $invoice) {
+            if (! $invoice->public_token) {
+                $invoice->public_token = Str::random(32);
+            }
+        });
+    }
 
     protected $fillable = [
         'user_id',
@@ -23,6 +34,9 @@ class Invoice extends Model
         'status',
         'due_date',
         'notes',
+        'currency',
+        'pdf_template',
+        'public_token',
     ];
 
     protected function casts(): array
@@ -44,7 +58,7 @@ class Invoice extends Model
 
     public function client(): BelongsTo
     {
-        return $this->belongsTo(Client::class);
+        return $this->belongsTo(Client::class)->withTrashed();
     }
 
     public function items(): HasMany

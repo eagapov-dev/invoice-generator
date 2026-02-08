@@ -44,8 +44,9 @@ export default function Settings() {
                 default_tax_percent: settings.default_tax_percent?.toString() || '0',
             });
             setLogoUrl(settings.logo_url);
-        } catch (error) {
-            console.error('Failed to load settings:', error);
+        } catch (err) {
+            console.error('Failed to load settings:', err);
+            setMessage({ type: 'error', text: 'Failed to load settings. Please try again.' });
         } finally {
             setFetching(false);
         }

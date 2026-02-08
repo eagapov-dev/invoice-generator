@@ -172,9 +172,25 @@
             color: #666;
             font-size: 10px;
         }
+        .watermark {
+            position: fixed;
+            top: 35%;
+            left: 10%;
+            font-size: 60px;
+            color: rgba(0, 0, 0, 0.06);
+            transform: rotate(-35deg);
+            z-index: 0;
+            pointer-events: none;
+            white-space: nowrap;
+            font-weight: bold;
+            letter-spacing: 5px;
+        }
     </style>
 </head>
 <body>
+    @if($showWatermark)
+        <div class="watermark">INVOICE GENERATOR</div>
+    @endif
     <div class="container">
         <table style="width: 100%; margin-bottom: 40px;">
             <tr>
@@ -259,8 +275,8 @@
                 <tr>
                     <td>{{ $item->description }}</td>
                     <td style="text-align: right;">{{ number_format($item->quantity, 2) }}</td>
-                    <td style="text-align: right;">{{ $company?->default_currency ?? 'USD' }} {{ number_format($item->price, 2) }}</td>
-                    <td style="text-align: right;">{{ $company?->default_currency ?? 'USD' }} {{ number_format($item->total, 2) }}</td>
+                    <td style="text-align: right;">{{ $invoice->currency }} {{ number_format($item->price, 2) }}</td>
+                    <td style="text-align: right;">{{ $invoice->currency }} {{ number_format($item->total, 2) }}</td>
                 </tr>
                 @endforeach
             </tbody>
@@ -270,23 +286,23 @@
             <table>
                 <tr>
                     <td>Subtotal:</td>
-                    <td>{{ $company?->default_currency ?? 'USD' }} {{ number_format($invoice->subtotal, 2) }}</td>
+                    <td>{{ $invoice->currency }} {{ number_format($invoice->subtotal, 2) }}</td>
                 </tr>
                 @if($invoice->tax_percent > 0)
                 <tr>
                     <td>Tax ({{ number_format($invoice->tax_percent, 1) }}%):</td>
-                    <td>{{ $company?->default_currency ?? 'USD' }} {{ number_format($invoice->subtotal * $invoice->tax_percent / 100, 2) }}</td>
+                    <td>{{ $invoice->currency }} {{ number_format($invoice->subtotal * $invoice->tax_percent / 100, 2) }}</td>
                 </tr>
                 @endif
                 @if($invoice->discount > 0)
                 <tr>
                     <td>Discount:</td>
-                    <td>-{{ $company?->default_currency ?? 'USD' }} {{ number_format($invoice->discount, 2) }}</td>
+                    <td>-{{ $invoice->currency }} {{ number_format($invoice->discount, 2) }}</td>
                 </tr>
                 @endif
                 <tr class="total-row">
                     <td>Total:</td>
-                    <td>{{ $company?->default_currency ?? 'USD' }} {{ number_format($invoice->total, 2) }}</td>
+                    <td>{{ $invoice->currency }} {{ number_format($invoice->total, 2) }}</td>
                 </tr>
             </table>
         </div>

@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import dashboardApi from '../api/dashboard';
+import plansApi from '../api/plans';
 import Card from '../components/common/Card';
 import Badge from '../components/common/Badge';
+import Alert from '../components/common/Alert';
 import { formatCurrency, formatDate } from '../utils/formatCurrency';
 import { INVOICE_STATUSES } from '../utils/constants';
 
@@ -22,9 +24,37 @@ function StatCard({ title, value, icon, color }) {
     );
 }
 
+function UsageBar({ label, used, limit, unlimited }) {
+    if (unlimited) {
+        return (
+            <div className="flex justify-between items-center py-2">
+                <span className="text-sm text-gray-600">{label}</span>
+                <span className="text-sm font-medium text-gray-900">{used} / Unlimited</span>
+            </div>
+        );
+    }
+
+    const percentage = limit > 0 ? Math.min(100, (used / limit) * 100) : 0;
+    const barColor = percentage >= 90 ? 'bg-red-500' : percentage >= 70 ? 'bg-yellow-500' : 'bg-blue-500';
+
+    return (
+        <div className="py-2">
+            <div className="flex justify-between items-center mb-1">
+                <span className="text-sm text-gray-600">{label}</span>
+                <span className="text-sm font-medium text-gray-900">{used} / {limit}</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+                <div className={`${barColor} h-2 rounded-full transition-all`} style={{ width: `${percentage}%` }} />
+            </div>
+        </div>
+    );
+}
+
 export default function Dashboard() {
     const [data, setData] = useState(null);
+    const [limits, setLimits] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
     useEffect(() => {
         loadDashboard();
@@ -32,10 +62,15 @@ export default function Dashboard() {
 
     const loadDashboard = async () => {
         try {
-            const response = await dashboardApi.getStats();
-            setData(response.data);
-        } catch (error) {
-            console.error('Failed to load dashboard:', error);
+            const [dashResponse, limitsResponse] = await Promise.all([
+                dashboardApi.getStats(),
+                plansApi.getUserLimits(),
+            ]);
+            setData(dashResponse.data);
+            setLimits(limitsResponse.data.data);
+        } catch (err) {
+            console.error('Failed to load dashboard:', err);
+            setError('Failed to load dashboard data. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -58,6 +93,12 @@ export default function Dashboard() {
                 <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
                 <p className="text-gray-600">Overview of your invoicing activity</p>
             </div>
+
+            {error && (
+                <Alert variant="error" onClose={() => setError(null)}>
+                    {error}
+                </Alert>
+            )}
 
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
                 <StatCard
@@ -174,6 +215,44 @@ export default function Dashboard() {
                     </div>
                 </Card>
             </div>
+
+            {limits && (
+                <Card title="Plan Usage">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                            <span className="text-gray-600">Current Plan:</span>
+                            <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
+                                {limits.plan.name}
+                            </span>
+                        </div>
+                        {limits.plan.slug === 'free' && (
+                            <Link to="/billing" className="text-sm font-medium text-blue-600 hover:text-blue-500">
+                                Upgrade
+                            </Link>
+                        )}
+                    </div>
+                    <div className="space-y-1">
+                        <UsageBar
+                            label="Invoices this month"
+                            used={limits.invoices.used}
+                            limit={limits.invoices.limit}
+                            unlimited={limits.invoices.unlimited}
+                        />
+                        <UsageBar
+                            label="Clients"
+                            used={limits.clients.used}
+                            limit={limits.clients.limit}
+                            unlimited={limits.clients.unlimited}
+                        />
+                        <UsageBar
+                            label="Products"
+                            used={limits.products.used}
+                            limit={limits.products.limit}
+                            unlimited={limits.products.unlimited}
+                        />
+                    </div>
+                </Card>
+            )}
         </div>
     );
 }

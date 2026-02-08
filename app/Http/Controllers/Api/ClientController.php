@@ -26,7 +26,7 @@ class ClientController extends Controller
                 });
             })
             ->orderBy('name')
-            ->paginate($request->per_page ?? 15);
+            ->paginate($this->perPage($request));
 
         return ClientResource::collection($clients);
     }

@@ -26,6 +26,8 @@ class UpdateInvoiceRequest extends FormRequest
             'status' => ['nullable', Rule::enum(InvoiceStatus::class)],
             'due_date' => ['nullable', 'date'],
             'notes' => ['nullable', 'string', 'max:2000'],
+            'currency' => ['sometimes', 'string', 'size:3'],
+            'pdf_template' => ['sometimes', 'string', Rule::in(['classic', 'modern', 'minimal'])],
             'items' => ['sometimes', 'required', 'array', 'min:1'],
             'items.*.id' => ['nullable', 'integer'],
             'items.*.product_id' => [
